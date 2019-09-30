@@ -1,0 +1,32 @@
+check the swarm registery and centralizing of images -- done
+create a simple micro service example:
+create eureka-service using host name registration -- @ Host 1
+create a client service connecting it @ Host 2
+dockerize it
+
+
+docker service create \
+  -p 5000:5000 \
+  --restart=always \
+  --name registry \
+  -v /home/webwerks/Documents/Study/Docker-swarm/local-registry:/var/lib/registry \
+  registry:2
+
+
+docker service create --name registry --publish 5000:5000 -v /home/webwerks/Documents/Study/Docker-swarm/local-registry:/var/lib/registry registry:2
+docker stack deploy -c docker-compose.yaml --resolve-image=changed --with-registry-auth micro-service-stack
+
+
+% docker swarm leave
+% docker node rm <NODE_ID>
+% docker node update --availability active moby
+% docker node update --availability drain moby
+% docker node promote moby
+
+
+docker service create --replicas 1 --name helloworld alpine ping docker.com
+
+docker service scale helloworld=5
+
+
+% docker run --entrypoint htpasswd registry:2 -Bbn testuser testpassword > /etc/nginx/ssl/auth/htpasswd

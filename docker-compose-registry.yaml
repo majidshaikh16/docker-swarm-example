@@ -1,0 +1,29 @@
+version: '3'
+services:
+        docker-registry:
+                image: registry:2
+                container_name: docker-registry
+                ports:
+                        - 5000:5000
+                restart: always
+                environment:
+                     #   REGISTRY_HTTP_TLS_CERTIFICATE: /certs/star.small.mu.crt
+                     #   REGISTRY_HTTP_TLS_KEY: /certs/star.small.mu.key
+                        REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+                        REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+                        REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+                volumes:
+                        - /home/webwerks/Documents/Study/Docker-swarm/local-registry:/var/lib/registry
+                     #   - /etc/registry/certs:/certs
+                        - /home/webwerks/Documents/Study/Docker-swarm/auth:/auth
+        docker-registry-ui:
+                image: konradkleine/docker-registry-frontend:v2
+                container_name: docker-registry-ui
+                ports:
+                        - 8091:80
+                restart: always          
+                environment:
+                     ENV_DOCKER_REGISTRY_HOST: docker-registry
+                     ENV_DOCKER_REGISTRY_PORT: 5000
+
+                               

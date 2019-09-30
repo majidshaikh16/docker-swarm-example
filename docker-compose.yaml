@@ -1,0 +1,70 @@
+version: '3.7'
+services:
+  naming-server:
+    image: "neosoft.devops.com:5000/naming:latest"
+    ports:
+      - 8761:8761
+    stop_grace_period: 30s
+    deploy:
+      replicas: 1
+      update_config:
+        delay: 10s
+        parallelism: 2
+        failure_action: rollback
+        order: stop-first
+      restart_policy:
+        condition:  on-failure
+    networks:
+      - webnet
+  micro1:
+    build: ./micro-service/micro1
+    image: "neosoft.devops.com:5000/micro1:latest"
+    ports:
+      - 9001:9001
+    secrets:
+      - my_secrets
+      - MY_SECRET
+    #command: "export MY_SECRET=$$(cat /run/secrets/MY_SECRET)"
+    #entrypoint: "java -jar micro1-exec.jar"
+   # entrypoint: export MY_SECRET=$$(cat /run/secrets/MY_SECRET) && java -jar micro1-exec.jar
+    stop_grace_period: 30s
+    deploy:
+      replicas: 1
+      update_config:
+        delay: 10s
+        parallelism: 2
+        failure_action: rollback
+        order: stop-first
+      restart_policy:
+        condition:  on-failure
+    networks:
+      - webnet
+  micro2:
+    image: "neosoft.devops.com:5000/micro2:latest"
+    ports:
+      - 9002:9002
+    stop_grace_period: 30s
+    deploy:
+      replicas: 1
+      update_config:
+        delay: 10s
+        parallelism: 2
+        failure_action: rollback
+        order: stop-first
+      restart_policy:
+        condition:  on-failure
+    networks:
+      - webnet
+
+
+secrets:
+  my_secrets:
+    file: ./secrets.txt
+ #   external: true
+  MY_SECRET:
+    external: true
+ # pg_database:
+ #   external: true
+
+networks:
+  webnet:    

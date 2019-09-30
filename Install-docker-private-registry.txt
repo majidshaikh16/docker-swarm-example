@@ -1,0 +1,152 @@
+Setting up private local docker registry
+https://medium.com/@zh3w4ng/docker-swarm-with-private-registry-for-micro-services-behind-corporate-proxy-bafb349d0b9c
+
+1] create this docker-registry-compose.yml file / start it eg : docker-compose -f docker-registry-compose.yml
+
+version: '3'
+services:
+        docker-registry:
+                image: registry:2
+                container_name: docker-registry
+                ports:
+                        - 5000:5000
+                restart: always
+                volumes:
+                        - /home/webwerks/Documents/Study/Docker-swarm/local-registry:/var/lib/registry
+        docker-registry-ui:
+                image: konradkleine/docker-registry-frontend:v2
+                container_name: docker-registry-ui
+                ports:
+                        - 8091:80
+                restart: always
+                environment:
+                     ENV_DOCKER_REGISTRY_HOST: docker-registry
+                     ENV_DOCKER_REGISTRY_PORT: 5000
+
+
+2] vim /etc/hosts
+   add you domain example: 10.0.60.234	neosoft.devops.com
+
+3] vim /etc/docker/daemon.json
+	Put this values in it
+	{
+		"insecure-registries":	["neosoft.devops.com:5000"]	
+	}
+4] systemctl stop docker , systemctl start docker
+
+5] for demo purpose 
+   docker pull alpine
+   docker tag alpine:latest neosoft.devops.com/majid/alpine:v1
+
+6] We are almost done. The only thing left is authentication.
+	* run this command to create a encrypted password 
+		docker run --entrypoint htpasswd registry:2 -Bbn webwerks p@ssw0rd > /home/webwerks/Documents/Study/Docker-swarm/swarm-auth
+
+	*
+
+
+
+upstream registry {
+  server 127.0.0.1:5000;
+}
+server {
+  listen *:80;
+  server_name neosoft.devops.com;
+  server_tokens off;
+  return 301 https://neosoft.devops.com:443$request_uri;
+}
+server {
+  listen *:443; # ssl http2;
+  server_name neosoft.devops.com;
+  ssl on;
+  ssl_certificate /etc/nginx/ssl/neosoft.devops.crt;       
+  ssl_certificate_key /etc/nginx/ssl/neosoft.devops.key;
+  client_max_body_size 0;
+  chunked_transfer_encoding on;
+  location / {
+    if ($http_user_agent ~ "^(docker/1.(3|4|5(?!.[0-9]-dev))|Go ).*$" ) {
+      return 404;
+    }
+   proxy_set_header  Host              $http_host;
+   proxy_set_header  X-Real-IP         $remote_addr;
+   proxy_set_header  X-Forwarded-For   $proxy_add_x_forwarded_for;
+   proxy_set_header  X-Forwarded-Proto $scheme;
+   proxy_read_timeout                  900;
+   proxy_pass http://registry;
+  }
+}
+
+
+% docker run --entrypoint htpasswd registry:2 -Bbn testuser testpassword > /etc/nginx/ssl/auth/htpasswd
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--------------------------------------------- Working And Tested Steps -------------------------------------------------------
+1] Create a docker compose file with the below content:
+version: '3'
+services:
+        docker-registry:
+                image: registry:2
+                container_name: docker-registry
+                ports:
+                        - 5000:5000
+                restart: always
+                environment:
+                     #   REGISTRY_HTTP_TLS_CERTIFICATE: /certs/star.small.mu.crt
+                     #   REGISTRY_HTTP_TLS_KEY: /certs/star.small.mu.key
+                        REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+                        REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+                        REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+                volumes:
+                        - /home/webwerks/Documents/Study/Docker-swarm/local-registry:/var/lib/registry
+                     #   - /etc/registry/certs:/certs
+                        - /home/webwerks/Documents/Study/Docker-swarm/auth:/auth
+        docker-registry-ui:
+                image: konradkleine/docker-registry-frontend:v2
+                container_name: docker-registry-ui
+                ports:
+                        - 8091:80
+                restart: always          
+                environment:
+                     ENV_DOCKER_REGISTRY_HOST: docker-registry
+                     ENV_DOCKER_REGISTRY_PORT: 5000
+
+
+2] Add a host entry in all the workers and managers vim /etc/hosts
+   add you domain example: 10.0.60.234	neosoft.devops.com
+
+
+3] If you are not using https you would need to add and entry so that docker comes to know, by default it sends to https registry, vim /etc/docker/daemon.json
+	Put this values in it
+	{
+		"insecure-registries":	["neosoft.devops.com:5000"]	
+	}
+
+4] restart your docker server (all the server where you do the changes) systemctl stop docker , systemctl start docker
+
+5] Create an Authentication for all the push request to your private registry eg: neosoft.devops.com
+docker run --entrypoint htpasswd registry:2 -Bbn testuser testpassword > /etc/nginx/ssl/auth/htpasswd
+[Note]: path can be any but the same is needed to be changed in the step 1 docker compose file
+
+6] push and image to your registry to check the working eg docker push neosoft.devops.com:5000/<image-name>
+
+7] you can check the images via command curl neosoft.devops.com:5000/v2/_catalog {This may require Auth}
+- you can check it via the UI as well from the step 1 file the url would be http://neosoft.devops.com:8091/home

@@ -1,0 +1,25 @@
+server:  
+  port: 9002
+  
+spring:
+  application:
+    name: micro2
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${DEFAULT_ZONE}
+  instance:
+    prefer-ip-address: ${PREFER_IP_ADDRESS:false}
+    ipAddress : ${HOST_NAME:${spring.application.name}}
+    hostname: ${HOST_NAME:${spring.application.name}}
+    instance-id: ${vcap.application.instance_id:${spring.application.name}:${spring.application.instance_id:${random.value}}}
+    leaseRenewalIntervalInSeconds: ${LEASE_RENEWAL_INTERVAl_IN_SECONDS:10}
+    leaseExpirationDurationInSeconds: ${LEASE_EXPIRATION_DURATIONIN_SECONDS:20}
+    
+    
+    
+DEFAULT_ZONE: http://naming-server:8761/eureka/ 
+    

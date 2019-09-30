@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: naming-server
+    
+server:  
+  port: 8761
+  
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: ${DEFAULT_ZONE}
+  instance:
+    hostname: ${HOST_NAME:localhost} 
+    appname: eureka-cluster 
+    instance-id: ${vcap.application.instance_id:${spring.application.name}:${spring.application.instance_id:${random.value}}}
+    leaseRenewalIntervalInSeconds: 10
+    leaseExpirationDurationInSeconds: 20 
+      
+      
+DEFAULT_ZONE: http://naming-server:8761/eureka/
